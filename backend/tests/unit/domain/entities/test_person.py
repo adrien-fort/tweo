@@ -17,6 +17,36 @@ class TestPersonCreation:
         person = Person(tmdb_id=1, name="Jean-Pierre Jeunet")
         assert person.name == "Jean-Pierre Jeunet"
 
+    def test_optional_fields_default_to_empty(self) -> None:
+        person = Person(tmdb_id=1, name="Someone")
+        assert person.nationalities == ()
+        assert person.mother_tongue is None
+        assert person.spoken_languages == ()
+
+    def test_creates_with_all_optional_fields(self) -> None:
+        person = Person(
+            tmdb_id=525,
+            name="Christopher Nolan",
+            nationalities=("GB", "US"),
+            mother_tongue="en",
+            spoken_languages=("en", "fr"),
+        )
+        assert person.nationalities == ("GB", "US")
+        assert person.mother_tongue == "en"
+        assert person.spoken_languages == ("en", "fr")
+
+    def test_nationalities_normalised_to_uppercase(self) -> None:
+        person = Person(tmdb_id=1, name="Someone", nationalities=("gb", "us"))
+        assert person.nationalities == ("GB", "US")
+
+    def test_mother_tongue_normalised_to_lowercase(self) -> None:
+        person = Person(tmdb_id=1, name="Someone", mother_tongue="EN")
+        assert person.mother_tongue == "en"
+
+    def test_spoken_languages_normalised_to_lowercase(self) -> None:
+        person = Person(tmdb_id=1, name="Someone", spoken_languages=("EN", "FR"))
+        assert person.spoken_languages == ("en", "fr")
+
 
 class TestPersonValidation:
     """Field validation raises ValueError on invalid inputs."""
@@ -36,6 +66,18 @@ class TestPersonValidation:
     def test_whitespace_name_raises(self) -> None:
         with pytest.raises(ValueError, match="name"):
             Person(tmdb_id=1, name="   ")
+
+    def test_invalid_nationality_code_raises(self) -> None:
+        with pytest.raises(ValueError, match="nationalities"):
+            Person(tmdb_id=1, name="Someone", nationalities=("GBR",))
+
+    def test_invalid_mother_tongue_raises(self) -> None:
+        with pytest.raises(ValueError, match="mother_tongue"):
+            Person(tmdb_id=1, name="Someone", mother_tongue="eng")
+
+    def test_invalid_spoken_language_raises(self) -> None:
+        with pytest.raises(ValueError, match="spoken_languages"):
+            Person(tmdb_id=1, name="Someone", spoken_languages=("en", "xxx"))
 
 
 class TestPersonImmutability:

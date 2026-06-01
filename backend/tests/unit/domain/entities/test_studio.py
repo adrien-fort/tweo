@@ -13,6 +13,18 @@ class TestStudioCreation:
         assert studio.tmdb_id == 174
         assert studio.name == "Warner Bros. Pictures"
 
+    def test_country_defaults_to_none(self) -> None:
+        studio = Studio(tmdb_id=174, name="Warner Bros.")
+        assert studio.country is None
+
+    def test_creates_with_country(self) -> None:
+        studio = Studio(tmdb_id=174, name="Warner Bros.", country="US")
+        assert studio.country == "US"
+
+    def test_country_normalised_to_uppercase(self) -> None:
+        studio = Studio(tmdb_id=174, name="Warner Bros.", country="us")
+        assert studio.country == "US"
+
 
 class TestStudioValidation:
     """Field validation raises ValueError on invalid inputs."""
@@ -32,6 +44,10 @@ class TestStudioValidation:
     def test_whitespace_name_raises(self) -> None:
         with pytest.raises(ValueError, match="name"):
             Studio(tmdb_id=174, name="   ")
+
+    def test_invalid_country_code_raises(self) -> None:
+        with pytest.raises(ValueError, match="country"):
+            Studio(tmdb_id=174, name="Warner Bros.", country="USA")
 
 
 class TestStudioImmutability:

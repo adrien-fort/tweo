@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from app.core.domain.entities.person import Person
 from app.core.domain.entities.studio import Studio
+from app.core.domain.validators import validate_language_code
 from app.core.domain.value_objects.cast_member import CastMember
 from app.core.domain.value_objects.collection_membership import CollectionMembership
 from app.core.domain.value_objects.media_links import MediaLinks
@@ -40,6 +41,9 @@ class Movie:
             entry.
         media_links: External poster and trailer URLs.
         ratings: Community score and age certifications.
+        original_language: ISO 639-1 alpha-2 code for the language the
+            movie was originally produced in (e.g. ``"en"``, ``"fr"``).
+            Normalised to lowercase.
         collection_membership: Describes this movie's position within a
             collection or franchise, or ``None`` for standalone films.
 
@@ -48,6 +52,8 @@ class Movie:
         ValueError: If ``title`` or ``synopsis`` is empty or whitespace.
         ValueError: If ``release_year`` is before 1888.
         ValueError: If ``cast`` or ``studios`` is an empty tuple.
+        ValueError: If ``original_language`` is not a valid ISO 639-1
+            alpha-2 language code.
 
     Example:
         >>> from app.core.domain.entities.person import Person
@@ -67,6 +73,7 @@ class Movie:
         ...     studios=(wb,),
         ...     media_links=MediaLinks(),
         ...     ratings=Ratings(),
+        ...     original_language="en",
         ... )
     """
 
@@ -79,10 +86,11 @@ class Movie:
     studios: tuple[Studio, ...]
     media_links: MediaLinks
     ratings: Ratings
+    original_language: str
     collection_membership: CollectionMembership | None = None
 
     def __post_init__(self) -> None:
-        """Validate all fields after initialisation."""
+        """Validate and normalise all fields after initialisation."""
         if not isinstance(self.tmdb_id, int) or isinstance(self.tmdb_id, bool) or self.tmdb_id <= 0:
             raise ValueError(f"tmdb_id must be a positive integer, got: {self.tmdb_id!r}")
 
@@ -103,6 +111,12 @@ class Movie:
 
         if not self.studios:
             raise ValueError("studios must contain at least one Studio")
+
+        object.__setattr__(
+            self,
+            "original_language",
+            validate_language_code(self.original_language, "original_language"),
+        )
 
     def __eq__(self, other: object) -> bool:
         """Compare by ``tmdb_id`` only."""

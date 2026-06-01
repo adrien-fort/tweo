@@ -67,6 +67,7 @@ def valid_movie(
         studios=(studio,),
         media_links=media_links,
         ratings=ratings,
+        original_language="en",
     )
 
 
@@ -77,7 +78,30 @@ class TestMovieCreation:
         assert valid_movie.tmdb_id == 27205
         assert valid_movie.title == "Inception"
         assert valid_movie.release_year == 2010
+        assert valid_movie.original_language == "en"
         assert valid_movie.collection_membership is None
+
+    def test_original_language_normalised_to_lowercase(
+        self,
+        director: Person,
+        cast: tuple[CastMember, ...],
+        studio: Studio,
+        media_links: MediaLinks,
+        ratings: Ratings,
+    ) -> None:
+        movie = Movie(
+            tmdb_id=27205,
+            title="Inception",
+            synopsis="A synopsis.",
+            release_year=2010,
+            director=director,
+            cast=cast,
+            studios=(studio,),
+            media_links=media_links,
+            ratings=ratings,
+            original_language="EN",
+        )
+        assert movie.original_language == "en"
 
     def test_creates_with_collection_membership(
         self,
@@ -98,6 +122,7 @@ class TestMovieCreation:
             studios=(studio,),
             media_links=media_links,
             ratings=ratings,
+            original_language="en",
             collection_membership=membership,
         )
         assert movie.collection_membership == membership
@@ -116,6 +141,7 @@ class TestMovieCreation:
             studios=(studio,),
             media_links=media_links,
             ratings=ratings,
+            original_language="en",
         )
         assert movie.director == movie.cast[0].person
 
@@ -137,6 +163,7 @@ class TestMovieCreation:
             studios=(studio,),
             media_links=media_links,
             ratings=ratings,
+            original_language="en",
         )
         assert movie.release_year == 1888
 
@@ -163,6 +190,7 @@ class TestMovieValidation:
                 studios=(studio,),
                 media_links=media_links,
                 ratings=ratings,
+                original_language="en",
             )
 
     def test_empty_title_raises(
@@ -184,6 +212,7 @@ class TestMovieValidation:
                 studios=(studio,),
                 media_links=media_links,
                 ratings=ratings,
+                original_language="en",
             )
 
     def test_empty_synopsis_raises(
@@ -205,6 +234,7 @@ class TestMovieValidation:
                 studios=(studio,),
                 media_links=media_links,
                 ratings=ratings,
+                original_language="en",
             )
 
     def test_release_year_before_1888_raises(
@@ -226,6 +256,7 @@ class TestMovieValidation:
                 studios=(studio,),
                 media_links=media_links,
                 ratings=ratings,
+                original_language="en",
             )
 
     def test_empty_studios_tuple_raises(
@@ -246,6 +277,29 @@ class TestMovieValidation:
                 studios=(),
                 media_links=media_links,
                 ratings=ratings,
+                original_language="en",
+            )
+
+    def test_invalid_original_language_raises(
+        self,
+        director: Person,
+        cast: tuple[CastMember, ...],
+        studio: Studio,
+        media_links: MediaLinks,
+        ratings: Ratings,
+    ) -> None:
+        with pytest.raises(ValueError, match="original_language"):
+            Movie(
+                tmdb_id=27205,
+                title="Inception",
+                synopsis="A synopsis.",
+                release_year=2010,
+                director=director,
+                cast=cast,
+                studios=(studio,),
+                media_links=media_links,
+                ratings=ratings,
+                original_language="eng",
             )
 
 
@@ -264,7 +318,15 @@ class TestMovieImmutability:
 class TestMovieEquality:
     """Identity-based equality on tmdb_id."""
 
-    def test_same_tmdb_id_are_equal(self, valid_movie: Movie, director: Person, cast: tuple[CastMember, ...], studio: Studio, media_links: MediaLinks, ratings: Ratings) -> None:
+    def test_same_tmdb_id_are_equal(
+        self,
+        valid_movie: Movie,
+        director: Person,
+        cast: tuple[CastMember, ...],
+        studio: Studio,
+        media_links: MediaLinks,
+        ratings: Ratings,
+    ) -> None:
         duplicate = Movie(
             tmdb_id=27205,
             title="Inception (different title object)",
@@ -275,10 +337,19 @@ class TestMovieEquality:
             studios=(studio,),
             media_links=media_links,
             ratings=ratings,
+            original_language="en",
         )
         assert valid_movie == duplicate
 
-    def test_different_tmdb_id_not_equal(self, valid_movie: Movie, director: Person, cast: tuple[CastMember, ...], studio: Studio, media_links: MediaLinks, ratings: Ratings) -> None:
+    def test_different_tmdb_id_not_equal(
+        self,
+        valid_movie: Movie,
+        director: Person,
+        cast: tuple[CastMember, ...],
+        studio: Studio,
+        media_links: MediaLinks,
+        ratings: Ratings,
+    ) -> None:
         other = Movie(
             tmdb_id=99999,
             title="Inception",
@@ -289,6 +360,7 @@ class TestMovieEquality:
             studios=(studio,),
             media_links=media_links,
             ratings=ratings,
+            original_language="en",
         )
         assert valid_movie != other
 

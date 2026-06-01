@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from app.core.domain.validators import validate_country_code
+
 
 @dataclass(frozen=True)
 class Certification:
@@ -29,12 +31,7 @@ class Certification:
 
     def __post_init__(self) -> None:
         """Validate and normalise fields after initialisation."""
-        cleaned_country = self.country.strip().upper()
-        if len(cleaned_country) != 2 or not cleaned_country.isalpha():
-            raise ValueError(
-                f"country must be a 2-letter ISO 3166-1 alpha-2 code, got: {self.country!r}"
-            )
-        object.__setattr__(self, "country", cleaned_country)
+        object.__setattr__(self, "country", validate_country_code(self.country, "country"))
 
         cleaned_rating = self.rating.strip()
         if not cleaned_rating:
