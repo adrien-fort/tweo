@@ -97,6 +97,115 @@ twe/                                  ← git repo root
 - **`mother_tongue` ≠ `spoken_languages`**: native language is a single optional field; additional languages spoken are a separate tuple.
 - **Validators module**: shared helpers for ISO code validation to avoid duplicating logic across domain classes. Every class that stores a country or language code delegates to these.
 
+## Authentication & identity
+
+- **Provider**: Firebase Authentication with Google Sign-In. Free to 10k MAU, works on web + Android + iOS. No own registration form for now — add email/password as a second Firebase provider later if needed, zero rework.
+- **Backend flow**: frontend exchanges Google credential for a Firebase JWT; every backend request verifies the JWT using Firebase's public keys. Backend then issues its own session token (HttpOnly, Secure, SameSite=Strict cookie).
+- **User primary key**: Firebase `uid` — never email. Emails can change and must not be used as identity.
+- **Token storage**: access token in JS memory only (never localStorage/sessionStorage). Session token in HttpOnly cookie. Mobile: Android Keystore / iOS Keychain.
+- **Security non-negotiables** (pen test targets):
+  - Always verify JWT signature server-side; never trust unverified tokens
+  - Validate `state` parameter in OAuth flow (prevents OAuth CSRF)
+  - Mobile OAuth callback via Universal Links / App Links only (not custom URL schemes)
+  - Revoke Firebase token server-side on logout
+  - Rate-limit all auth endpoints
+  - Log all auth events (login, failure, logout, revocation)
+  - Short-lived access tokens (Firebase default 1h — keep it)
+
+## Persistence
+
+- **Dev**: SQLite via SQLAlchemy (zero setup, single file, functionally identical queries to Postgres)
+- **Prod (AKS)**: Azure Database for PostgreSQL Flexible Server, Burstable B1ms SKU (~$12–15/month)
+- **ORM**: SQLAlchemy — same models for both, connection string is the only change
+- **Migrations**: Alembic
+- **Encryption at rest**:
+  - Transparent disk encryption: Azure PostgreSQL default AES-256 (covers physical data at rest)
+  - PII fields (email): application-level encryption, key in Azure Key Vault (prod) / env var (dev). Key never in code or DB.
+  - Email lookup: store an HMAC of the email alongside the encrypted value for indexed lookups
+- **Privacy by design**: store minimum personal data; `User` must support anonymisation (right to erasure / GDPR)
+- **Repository pattern**: `core/interfaces/repositories.py` holds ABCs; `infrastructure/persistence/sqlite/` and `infrastructure/persistence/postgres/` hold concrete implementations. Service layer depends only on interfaces.
+- **Preferences**: stored as JSONB on `User` for now. Migration path to normalised table: dual-write via Alembic, cut over, drop column — no service-layer changes needed.
+
+### Schema
+
+```
+── Users ──────────────────────────────────────────────────────────────
+User
+  id                  UUID PK
+  firebase_uid        str  unique, immutable
+  email               bytes (AES-256 encrypted)
+  email_hash          bytes (HMAC, unique index — enables lookup without decrypting)
+  nickname            str | None
+  avatar_url          str | None  (HTTPS only)
+  system_role         SystemRole        MEMBER | ADMIN
+  gender              str | None
+  pronouns            str | None
+  bio                 str | None
+  preferences         JSONB | None      (media/game preferences, normalise later if needed)
+  created_at          timestamptz
+  updated_at          timestamptz
+  anonymized_at       timestamptz | None   (GDPR right to erasure — null PII, keep row)
+
+── Preset groups ──────────────────────────────────────────────────────
+UserGroup
+  id                  UUID PK
+  name                str
+  description         str | None
+  owner_id            UUID → User
+  created_at          timestamptz
+  updated_at          timestamptz
+
+UserGroupMembership
+  id                  UUID PK
+  group_id            UUID → UserGroup
+  user_id             UUID → User
+  added_by            UUID → User
+  added_at            timestamptz
+
+── Events ─────────────────────────────────────────────────────────────
+EventSeries             ← scheduling/grouping container only, no activity_type
+  id                  UUID PK
+  title               str              (e.g. "MCU Marathon", "Tuesday Games Night")
+  description         str | None
+  organiser_id        UUID → User
+  recurrence          RecurrenceType   WEEKLY | BIWEEKLY | MONTHLY | CUSTOM
+  created_at          timestamptz
+  updated_at          timestamptz
+
+Event
+  id                  UUID PK
+  series_id           UUID → EventSeries | None   (null = one-off event)
+  series_sequence     int | None
+  title               str
+  description         str | None
+  activity_type       ActivityType     MOVIE | TV_SERIES | VIDEO_GAME | TABLETOP_GAME
+  organiser_id        UUID → User      (immutable after creation)
+  privacy             EventPrivacy     PUBLIC | PRIVATE
+  status              EventStatus      OPEN | VOTING | COMPLETED | CANCELLED
+  scheduled_at        timestamptz | None
+  created_at          timestamptz
+  updated_at          timestamptz
+
+EventMembership
+  id                  UUID PK
+  event_id            UUID → Event
+  user_id             UUID → User
+  role                EventRole        CO_ORGANISER | PARTICIPANT
+  status              MembershipStatus INVITED | PENDING_APPROVAL | ACCEPTED | DECLINED
+  invited_by          UUID → User
+  invited_via_group_id UUID → UserGroup | None    (audit trail for bulk group invites)
+  invited_at          timestamptz
+  responded_at        timestamptz | None
+```
+
+### Key design decisions — persistence
+
+- **`EventSeries` has no `activity_type`**: it is a scheduling/grouping container only. Individual events carry their own type independently — a series can mix movies, series, games (e.g. MCU marathon spanning films and Disney+ shows).
+- **Event instances are created ad-hoc**, not pre-generated. Organiser (or app prompt) creates the next session manually. Avoids orphaned future events if a series ends.
+- **`organiser_id` lives on `Event`**, not in `EventMembership`. Prevents accidental self-removal. The organiser is not duplicated into `EventMembership`.
+- **`invited_via_group_id`** on `EventMembership` preserves the audit trail when a whole group is invited at once. When a group is used to invite, the service fans out one `EventMembership` row per group member, each carrying the group ID.
+- **System role vs event role are independent**: `User.system_role` (ADMIN/MEMBER) controls platform-level access; `EventMembership.role` controls per-event access. An ADMIN has no implicit power inside someone else's event.
+
 ## TV Series and Game — planned
 
 These are coming. When they arrive:
