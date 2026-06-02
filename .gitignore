@@ -20,6 +20,9 @@ coverage.xml
 htmlcov/
 .tox/
 
+# SQLite dev database
+*.db
+
 # IDE
 .vscode/
 .idea/
