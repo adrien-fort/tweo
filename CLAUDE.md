@@ -44,20 +44,34 @@ A group activity organiser. Groups of people coordinate and vote on a shared act
 ```
 twe/                                  ← git repo root
 ├── CLAUDE.md
-├── .github/workflows/backend-ci.yml  ← lint, typecheck, pytest (runs from backend/)
+├── sonar-project.properties
+├── .github/workflows/backend-ci.yml  ← lint, typecheck, pytest, SonarCloud
+├── infra/
+│   ├── terraform/                    ← AKS, PostgreSQL Flexible Server, Key Vault (skeleton)
+│   └── ansible/playbooks/            ← deploy.yml, db_migrate.yml (runs alembic upgrade head)
 ├── backend/
-│   ├── pyproject.toml                ← setuptools.build_meta, dev deps, pytest/ruff/mypy config
+│   ├── pyproject.toml                ← setuptools.build_meta, runtime + dev deps
+│   ├── alembic.ini                   ← reads DATABASE_URL env var
+│   ├── alembic/versions/             ← migration scripts
+│   ├── scripts/reset_dev_db.py       ← drops + recreates dev DB (SQLite only, guards against prod)
 │   ├── app/
-│   │   └── core/
-│   │       └── domain/
-│   │           ├── validators.py         ← shared validate_country_code / validate_language_code
-│   │           ├── value_objects/        ← Certification, MediaLinks, CollectionMembership, Ratings, CastMember
-│   │           └── entities/             ← Person, Studio, Collection, Movie
+│   │   ├── core/
+│   │   │   ├── domain/
+│   │   │   │   ├── validators.py         ← validate_country_code / validate_language_code / validate_https_url / validate_email
+│   │   │   │   ├── enums.py              ← SystemRole, ActivityType, RecurrenceType, EventPrivacy, EventStatus, EventRole, MembershipStatus
+│   │   │   │   ├── value_objects/        ← Certification, MediaLinks, CollectionMembership, Ratings, CastMember
+│   │   │   │   └── entities/             ← Person, Studio, Collection, Movie, User, UserGroup, UserGroupMembership, EventSeries, Event, EventMembership
+│   │   │   └── interfaces/
+│   │   │       └── repositories.py       ← ABCs: UserRepository, UserGroupRepository, EventSeriesRepository, EventRepository, EventMembershipRepository
+│   │   └── infrastructure/
+│   │       └── persistence/
+│   │           ├── database.py           ← engine + SessionFactory (DATABASE_URL env var)
+│   │           ├── encryption.py         ← Fernet encrypt/decrypt + email_hmac (DATABASE_ENCRYPTION_KEY env var)
+│   │           ├── models/               ← SQLAlchemy ORM models (separate from domain entities)
+│   │           └── sqlite/               ← concrete repository implementations
 │   └── tests/
-│       └── unit/domain/
-│           ├── test_validators.py
-│           ├── value_objects/
-│           └── entities/
+│       ├── unit/domain/                  ← 226 unit tests (validators, value objects, entities)
+│       └── integration/persistence/      ← integration tests using in-memory SQLite session fixture
 └── frontend/                         ← placeholder, TBD
 ```
 
@@ -220,3 +234,7 @@ These are coming. When they arrive:
 - **Running tests locally**: `cd backend && python -m pytest`
 - **Installing dev deps**: `cd backend && pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org pytest pytest-cov`
 - **`gh` CLI location**: `C:\Program Files\GitHub CLI\gh.exe` (not on bash PATH by default)
+- **Running integration tests**: `cd backend && python -m pytest tests/integration/`
+- **Resetting dev DB**: `cd backend && python scripts/reset_dev_db.py`
+- **Generating a Fernet key**: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+- **Integration test encryption key**: fixed test value set in `tests/integration/conftest.py` via `os.environ.setdefault`

@@ -1,0 +1,27 @@
+---
+# Runs Alembic migrations against the target database.
+# Safe to run on every deployment — alembic upgrade head is idempotent.
+# Usage: ansible-playbook db_migrate.yml -e environment=prod
+
+- name: Run database migrations
+  hosts: localhost
+  connection: local
+  vars:
+    environment: "{{ environment | default('dev') }}"
+
+  tasks:
+    - name: Retrieve DATABASE_URL from Key Vault
+      # Populated by Terraform output; used by Alembic via env var
+      azure.azcollection.azure_rm_keyvaultsecret_info:
+        vault_uri: "{{ lookup('env', 'KEY_VAULT_URI') }}"
+        name: database-url
+      register: db_url_secret
+      when: environment != 'dev'
+
+    - name: Run alembic upgrade head
+      ansible.builtin.command:
+        cmd: alembic upgrade head
+        chdir: "{{ playbook_dir }}/../../../backend"
+      environment:
+        DATABASE_URL: "{{ db_url_secret.secrets[0].secret_value | default(lookup('env', 'DATABASE_URL')) }}"
+      changed_when: true

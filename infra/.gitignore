@@ -1,0 +1,11 @@
+# Terraform state — never commit; use remote backend (Azure Storage)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+
+# Ansible vault / sensitive vars
+*.vault
+ansible/group_vars/*/vault.yml

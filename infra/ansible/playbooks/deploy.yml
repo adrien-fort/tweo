@@ -1,0 +1,20 @@
+---
+# Deploys the TWEO backend to AKS.
+# Run after: terraform apply (infrastructure must exist)
+# Usage: ansible-playbook deploy.yml -e environment=prod
+
+- name: Deploy TWEO backend
+  hosts: localhost
+  connection: local
+  vars:
+    environment: "{{ environment | default('dev') }}"
+    image_tag: "{{ image_tag | default('latest') }}"
+
+  tasks:
+    - name: Apply Kubernetes manifests
+      kubernetes.core.k8s:
+        state: present
+        src: "../../backend/k8s/{{ environment }}/"
+
+    - name: Run database migrations
+      ansible.builtin.import_playbook: db_migrate.yml
