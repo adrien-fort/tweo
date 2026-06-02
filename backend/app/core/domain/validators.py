@@ -69,3 +69,61 @@ def validate_language_code(code: str, field_name: str = "language") -> str:
     if len(cleaned) != 2 or not cleaned.isalpha():
         raise ValueError(f"{field_name} must be a 2-letter ISO 639-1 alpha-2 code, got: {code!r}")
     return cleaned
+
+
+def validate_https_url(url: str, field_name: str = "url") -> str:
+    """Validate that a URL is non-empty and uses HTTPS.
+
+    Args:
+        url: The URL string to validate.
+        field_name: Name of the field being validated, used in the
+            error message (e.g. ``"avatar_url"``).
+
+    Returns:
+        The original URL string unchanged.
+
+    Raises:
+        ValueError: If ``url`` is empty or whitespace only.
+        ValueError: If ``url`` does not start with ``"https://"``.
+
+    Example:
+        >>> validate_https_url("https://example.com/img.jpg", "avatar_url")
+        'https://example.com/img.jpg'
+    """
+    if not url.strip():
+        raise ValueError(f"{field_name} must be a non-empty string or None")
+    if not url.startswith("https://"):
+        raise ValueError(f"{field_name} must start with 'https://', got: {url!r}")
+    return url
+
+
+def validate_email(email: str, field_name: str = "email") -> str:
+    """Validate that a string is a plausible email address.
+
+    Performs lightweight structural validation only: non-empty, contains
+    exactly one ``@``, with non-empty local and domain parts. Full RFC
+    5321 validation is the responsibility of the API boundary layer.
+
+    Args:
+        email: The email string to validate.
+        field_name: Name of the field being validated, used in the
+            error message.
+
+    Returns:
+        The email string stripped of surrounding whitespace.
+
+    Raises:
+        ValueError: If ``email`` is empty, whitespace only, or does not
+            contain a valid ``local@domain`` structure.
+
+    Example:
+        >>> validate_email("user@example.com")
+        'user@example.com'
+    """
+    cleaned = email.strip()
+    if not cleaned:
+        raise ValueError(f"{field_name} cannot be empty or whitespace")
+    parts = cleaned.split("@")
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise ValueError(f"{field_name} must be a valid email address, got: {email!r}")
+    return cleaned

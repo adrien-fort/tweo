@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.domain.validators import validate_country_code, validate_language_code
+from app.core.domain.validators import validate_country_code, validate_email, validate_https_url, validate_language_code
 
 
 class TestValidateCountryCode:
@@ -85,3 +85,69 @@ class TestValidateLanguageCode:
     def test_custom_field_name_in_error(self) -> None:
         with pytest.raises(ValueError, match="mother_tongue"):
             validate_language_code("e1", field_name="mother_tongue")
+
+
+class TestValidateHttpsUrl:
+    """validate_https_url rejects non-HTTPS and empty URLs."""
+
+    def test_valid_url_returned_unchanged(self) -> None:
+        url = "https://example.com/image.jpg"
+        assert validate_https_url(url) == url
+
+    def test_custom_field_name_in_error(self) -> None:
+        with pytest.raises(ValueError, match="avatar_url"):
+            validate_https_url("http://example.com", field_name="avatar_url")
+
+    def test_http_url_raises(self) -> None:
+        with pytest.raises(ValueError, match="url"):
+            validate_https_url("http://example.com/img.jpg")
+
+    def test_empty_string_raises(self) -> None:
+        with pytest.raises(ValueError, match="url"):
+            validate_https_url("")
+
+    def test_whitespace_only_raises(self) -> None:
+        with pytest.raises(ValueError, match="url"):
+            validate_https_url("   ")
+
+    def test_no_scheme_raises(self) -> None:
+        with pytest.raises(ValueError, match="url"):
+            validate_https_url("example.com/img.jpg")
+
+
+class TestValidateEmail:
+    """validate_email strips whitespace and validates basic structure."""
+
+    def test_valid_email_returned_stripped(self) -> None:
+        assert validate_email("  user@example.com  ") == "user@example.com"
+
+    def test_valid_email_unchanged(self) -> None:
+        assert validate_email("user@example.com") == "user@example.com"
+
+    def test_empty_string_raises(self) -> None:
+        with pytest.raises(ValueError, match="email"):
+            validate_email("")
+
+    def test_whitespace_only_raises(self) -> None:
+        with pytest.raises(ValueError, match="email"):
+            validate_email("   ")
+
+    def test_no_at_sign_raises(self) -> None:
+        with pytest.raises(ValueError, match="email"):
+            validate_email("userexample.com")
+
+    def test_multiple_at_signs_raises(self) -> None:
+        with pytest.raises(ValueError, match="email"):
+            validate_email("user@@example.com")
+
+    def test_missing_local_part_raises(self) -> None:
+        with pytest.raises(ValueError, match="email"):
+            validate_email("@example.com")
+
+    def test_missing_domain_part_raises(self) -> None:
+        with pytest.raises(ValueError, match="email"):
+            validate_email("user@")
+
+    def test_custom_field_name_in_error(self) -> None:
+        with pytest.raises(ValueError, match="contact_email"):
+            validate_email("bad", field_name="contact_email")

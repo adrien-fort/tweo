@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from app.core.domain.validators import validate_https_url
+
 
 @dataclass(frozen=True)
 class MediaLinks:
@@ -30,11 +32,7 @@ class MediaLinks:
 
     def __post_init__(self) -> None:
         """Validate all URL fields after initialisation."""
-        for field in ("poster_url", "trailer_url"):
-            value: str | None = getattr(self, field)
-            if value is None:
-                continue
-            if not value.strip():
-                raise ValueError(f"{field} must be a non-empty string or None")
-            if not value.startswith("https://"):
-                raise ValueError(f"{field} must start with 'https://', got: {value!r}")
+        for field_name in ("poster_url", "trailer_url"):
+            value: str | None = getattr(self, field_name)
+            if value is not None:
+                validate_https_url(value, field_name)
