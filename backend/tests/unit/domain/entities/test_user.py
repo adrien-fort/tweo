@@ -1,6 +1,6 @@
 """Tests for the User entity."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
@@ -108,7 +108,7 @@ class TestUserMutability:
         assert valid_user.system_role == SystemRole.ADMIN
 
     def test_anonymized_at_can_be_set(self, valid_user: User) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         valid_user.anonymized_at = now
         assert valid_user.anonymized_at == now
 

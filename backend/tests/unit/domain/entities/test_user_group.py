@@ -1,6 +1,6 @@
 """Tests for the UserGroup and UserGroupMembership entities."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest

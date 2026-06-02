@@ -1,14 +1,14 @@
 """EventSeries, Event, and EventMembership domain entities."""
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.core.domain.enums import ActivityType, EventPrivacy, EventRole, EventStatus, MembershipStatus, RecurrenceType
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass(eq=False)

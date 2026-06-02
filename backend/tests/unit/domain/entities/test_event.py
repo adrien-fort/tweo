@@ -1,6 +1,6 @@
 """Tests for EventSeries, Event, and EventMembership entities."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
@@ -157,7 +157,13 @@ class TestEventValidation:
 
     def test_empty_title_raises(self, organiser_id: UUID) -> None:
         with pytest.raises(ValueError, match="title"):
-            Event(id=uuid4(), title="", activity_type=ActivityType.MOVIE, organiser_id=organiser_id, privacy=EventPrivacy.PUBLIC)
+            Event(
+                id=uuid4(),
+                title="",
+                activity_type=ActivityType.MOVIE,
+                organiser_id=organiser_id,
+                privacy=EventPrivacy.PUBLIC,
+            )
 
     def test_series_sequence_without_series_id_raises(self, organiser_id: UUID) -> None:
         with pytest.raises(ValueError, match="series_sequence"):
@@ -200,15 +206,15 @@ class TestEventEquality:
 
     def test_same_id_are_equal(self, organiser_id: UUID) -> None:
         uid = uuid4()
-        e1 = Event(id=uid, title="A", activity_type=ActivityType.MOVIE, organiser_id=organiser_id, privacy=EventPrivacy.PUBLIC)
-        e2 = Event(id=uid, title="B", activity_type=ActivityType.MOVIE, organiser_id=organiser_id, privacy=EventPrivacy.PRIVATE)
+        kwargs = {"activity_type": ActivityType.MOVIE, "organiser_id": organiser_id, "privacy": EventPrivacy.PUBLIC}
+        e1 = Event(id=uid, title="A", **kwargs)
+        e2 = Event(id=uid, title="B", **kwargs)
         assert e1 == e2
 
     def test_different_id_not_equal(self, organiser_id: UUID) -> None:
-        assert Event(
-            id=uuid4(), title="E", activity_type=ActivityType.MOVIE, organiser_id=organiser_id, privacy=EventPrivacy.PUBLIC
-        ) != Event(
-            id=uuid4(), title="E", activity_type=ActivityType.MOVIE, organiser_id=organiser_id, privacy=EventPrivacy.PUBLIC
+        kwargs = {"title": "E", "activity_type": ActivityType.MOVIE, "organiser_id": organiser_id}
+        assert Event(id=uuid4(), privacy=EventPrivacy.PUBLIC, **kwargs) != Event(
+            id=uuid4(), privacy=EventPrivacy.PUBLIC, **kwargs
         )
 
     def test_hashable(self, valid_event: Event) -> None:
@@ -264,8 +270,12 @@ class TestEventMembershipCreation:
 
     def test_timestamps_default_to_utc_now(self) -> None:
         membership = EventMembership(
-            id=uuid4(), event_id=uuid4(), user_id=uuid4(),
-            role=EventRole.PARTICIPANT, status=MembershipStatus.INVITED, invited_by=uuid4(),
+            id=uuid4(),
+            event_id=uuid4(),
+            user_id=uuid4(),
+            role=EventRole.PARTICIPANT,
+            status=MembershipStatus.INVITED,
+            invited_by=uuid4(),
         )
         assert membership.invited_at.tzinfo is not None
 
@@ -275,18 +285,26 @@ class TestEventMembershipMutability:
 
     def test_status_can_be_updated(self) -> None:
         membership = EventMembership(
-            id=uuid4(), event_id=uuid4(), user_id=uuid4(),
-            role=EventRole.PARTICIPANT, status=MembershipStatus.INVITED, invited_by=uuid4(),
+            id=uuid4(),
+            event_id=uuid4(),
+            user_id=uuid4(),
+            role=EventRole.PARTICIPANT,
+            status=MembershipStatus.INVITED,
+            invited_by=uuid4(),
         )
         membership.status = MembershipStatus.ACCEPTED
         assert membership.status == MembershipStatus.ACCEPTED
 
     def test_responded_at_can_be_set(self) -> None:
         membership = EventMembership(
-            id=uuid4(), event_id=uuid4(), user_id=uuid4(),
-            role=EventRole.PARTICIPANT, status=MembershipStatus.INVITED, invited_by=uuid4(),
+            id=uuid4(),
+            event_id=uuid4(),
+            user_id=uuid4(),
+            role=EventRole.PARTICIPANT,
+            status=MembershipStatus.INVITED,
+            invited_by=uuid4(),
         )
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         membership.responded_at = now
         assert membership.responded_at == now
 
@@ -297,13 +315,31 @@ class TestEventMembershipEquality:
     def test_same_id_are_equal(self) -> None:
         uid = uuid4()
         eid, uid2 = uuid4(), uuid4()
-        m1 = EventMembership(id=uid, event_id=eid, user_id=uid2, role=EventRole.PARTICIPANT, status=MembershipStatus.INVITED, invited_by=uuid4())
-        m2 = EventMembership(id=uid, event_id=eid, user_id=uid2, role=EventRole.CO_ORGANISER, status=MembershipStatus.ACCEPTED, invited_by=uuid4())
+        m1 = EventMembership(
+            id=uid,
+            event_id=eid,
+            user_id=uid2,
+            role=EventRole.PARTICIPANT,
+            status=MembershipStatus.INVITED,
+            invited_by=uuid4(),
+        )
+        m2 = EventMembership(
+            id=uid,
+            event_id=eid,
+            user_id=uid2,
+            role=EventRole.CO_ORGANISER,
+            status=MembershipStatus.ACCEPTED,
+            invited_by=uuid4(),
+        )
         assert m1 == m2
 
     def test_hashable(self) -> None:
         m = EventMembership(
-            id=uuid4(), event_id=uuid4(), user_id=uuid4(),
-            role=EventRole.PARTICIPANT, status=MembershipStatus.INVITED, invited_by=uuid4(),
+            id=uuid4(),
+            event_id=uuid4(),
+            user_id=uuid4(),
+            role=EventRole.PARTICIPANT,
+            status=MembershipStatus.INVITED,
+            invited_by=uuid4(),
         )
         assert len({m, m}) == 1
