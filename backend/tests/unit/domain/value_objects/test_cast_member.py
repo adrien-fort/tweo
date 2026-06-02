@@ -43,7 +43,7 @@ class TestCastMemberImmutability:
 
     def test_character_name_is_immutable(self, actor: Person) -> None:
         member = CastMember(person=actor, character_name="Dom Cobb")
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             member.character_name = "Other"  # type: ignore[misc]
 
 
@@ -51,10 +51,14 @@ class TestCastMemberEquality:
     """Structural equality: same person + same character = same CastMember."""
 
     def test_equal_cast_members(self, actor: Person) -> None:
-        assert CastMember(person=actor, character_name="Dom Cobb") == CastMember(person=actor, character_name="Dom Cobb")
+        assert CastMember(person=actor, character_name="Dom Cobb") == CastMember(
+            person=actor, character_name="Dom Cobb"
+        )
 
     def test_different_character_not_equal(self, actor: Person) -> None:
-        assert CastMember(person=actor, character_name="Dom Cobb") != CastMember(person=actor, character_name="Jack Dawson")
+        assert CastMember(person=actor, character_name="Dom Cobb") != CastMember(
+            person=actor, character_name="Jack Dawson"
+        )
 
     def test_hashable(self, actor: Person) -> None:
         member = CastMember(person=actor, character_name="Dom Cobb")

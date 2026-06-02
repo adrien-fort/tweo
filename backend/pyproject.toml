@@ -21,7 +21,7 @@ testpaths = ["tests"]
 addopts = "-v --cov=app --cov-report=term-missing"
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]

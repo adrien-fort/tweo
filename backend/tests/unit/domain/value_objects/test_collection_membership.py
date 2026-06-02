@@ -60,7 +60,7 @@ class TestCollectionMembershipImmutability:
 
     def test_collection_id_is_immutable(self) -> None:
         membership = CollectionMembership(collection_id=1, collection_name="Trilogy")
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             membership.collection_id = 2  # type: ignore[misc]
 
 

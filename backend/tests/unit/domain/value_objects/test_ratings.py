@@ -73,7 +73,7 @@ class TestRatingsImmutability:
 
     def test_community_score_is_immutable(self) -> None:
         ratings = Ratings(community_score=7.0)
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             ratings.community_score = 8.0  # type: ignore[misc]
 
 

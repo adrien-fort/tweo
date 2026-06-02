@@ -34,9 +34,7 @@ def validate_country_code(code: str, field_name: str = "country") -> str:
     """
     cleaned = code.strip().upper()
     if len(cleaned) != 2 or not cleaned.isalpha():
-        raise ValueError(
-            f"{field_name} must be a 2-letter ISO 3166-1 alpha-2 code, got: {code!r}"
-        )
+        raise ValueError(f"{field_name} must be a 2-letter ISO 3166-1 alpha-2 code, got: {code!r}")
     return cleaned
 
 
@@ -69,7 +67,5 @@ def validate_language_code(code: str, field_name: str = "language") -> str:
     """
     cleaned = code.strip().lower()
     if len(cleaned) != 2 or not cleaned.isalpha():
-        raise ValueError(
-            f"{field_name} must be a 2-letter ISO 639-1 alpha-2 code, got: {code!r}"
-        )
+        raise ValueError(f"{field_name} must be a 2-letter ISO 639-1 alpha-2 code, got: {code!r}")
     return cleaned

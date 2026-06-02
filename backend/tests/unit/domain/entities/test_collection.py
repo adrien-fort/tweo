@@ -39,7 +39,7 @@ class TestCollectionImmutability:
 
     def test_collection_id_is_immutable(self) -> None:
         col = Collection(collection_id=263, name="The Dark Knight Trilogy")
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             col.collection_id = 1  # type: ignore[misc]
 
 
@@ -47,7 +47,9 @@ class TestCollectionEquality:
     """Identity-based equality on collection_id."""
 
     def test_same_collection_id_are_equal(self) -> None:
-        assert Collection(collection_id=263, name="DK Trilogy") == Collection(collection_id=263, name="Dark Knight Trilogy")
+        assert Collection(collection_id=263, name="DK Trilogy") == Collection(
+            collection_id=263, name="Dark Knight Trilogy"
+        )
 
     def test_different_collection_id_not_equal(self) -> None:
         assert Collection(collection_id=1, name="A") != Collection(collection_id=2, name="A")

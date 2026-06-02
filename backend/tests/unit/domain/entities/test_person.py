@@ -85,12 +85,12 @@ class TestPersonImmutability:
 
     def test_tmdb_id_is_immutable(self) -> None:
         person = Person(tmdb_id=1, name="Christopher Nolan")
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             person.tmdb_id = 2  # type: ignore[misc]
 
     def test_name_is_immutable(self) -> None:
         person = Person(tmdb_id=1, name="Christopher Nolan")
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             person.name = "Other"  # type: ignore[misc]
 
 

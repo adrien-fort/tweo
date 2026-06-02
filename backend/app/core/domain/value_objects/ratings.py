@@ -41,9 +41,7 @@ class Ratings:
         """Validate all fields after initialisation."""
         if self.community_score is not None:
             if not (0.0 <= self.community_score <= 10.0):
-                raise ValueError(
-                    f"community_score must be between 0.0 and 10.0, got: {self.community_score}"
-                )
+                raise ValueError(f"community_score must be between 0.0 and 10.0, got: {self.community_score}")
 
         if self.vote_count is not None:
             if self.community_score is None:

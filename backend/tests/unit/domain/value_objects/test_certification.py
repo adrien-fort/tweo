@@ -64,12 +64,12 @@ class TestCertificationImmutability:
 
     def test_country_is_immutable(self) -> None:
         cert = Certification(country="US", rating="PG-13")
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             cert.country = "GB"  # type: ignore[misc]
 
     def test_rating_is_immutable(self) -> None:
         cert = Certification(country="US", rating="PG-13")
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             cert.rating = "R"  # type: ignore[misc]
 
 

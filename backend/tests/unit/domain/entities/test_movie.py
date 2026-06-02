@@ -307,11 +307,11 @@ class TestMovieImmutability:
     """Frozen dataclass cannot be mutated."""
 
     def test_title_is_immutable(self, valid_movie: Movie) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             valid_movie.title = "Other"  # type: ignore[misc]
 
     def test_cast_tuple_cannot_be_replaced(self, valid_movie: Movie) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             valid_movie.cast = ()  # type: ignore[misc]
 
 

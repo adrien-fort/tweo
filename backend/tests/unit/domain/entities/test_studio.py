@@ -55,7 +55,7 @@ class TestStudioImmutability:
 
     def test_tmdb_id_is_immutable(self) -> None:
         studio = Studio(tmdb_id=174, name="Warner Bros.")
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             studio.tmdb_id = 1  # type: ignore[misc]
 
 

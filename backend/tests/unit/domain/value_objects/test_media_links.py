@@ -57,7 +57,7 @@ class TestMediaLinksImmutability:
 
     def test_poster_url_is_immutable(self) -> None:
         links = MediaLinks(poster_url="https://image.tmdb.org/poster.jpg")
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             links.poster_url = "https://other.com/img.jpg"  # type: ignore[misc]
 
 
