@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "sonar-project.properties"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     branches: [main]
     paths:
       - "backend/**"
+      - "sonar-project.properties"
       - ".github/workflows/backend-ci.yml"
 
 jobs:
@@ -59,6 +61,8 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # SonarCloud needs full history for blame analysis
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -68,3 +72,8 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Run tests
         run: pytest
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
