@@ -20,9 +20,11 @@ A group activity organiser. Groups of people coordinate and vote on a shared act
 ## Stack
 
 - **Backend**: Python 3.12 (targeting; currently running on 3.11 locally)
+- **Web framework**: FastAPI + Uvicorn (ASGI)
 - **Frontend**: TBD — React is the leading candidate
 - **CI**: GitHub Actions (`.github/workflows/backend-ci.yml`)
 - **Repo**: https://github.com/adrien-fort/tweo
+- **Observability**: structlog (structured logging) + OpenTelemetry SDK (traces + metrics). Auto-instruments FastAPI and SQLAlchemy. Uses `OTEL_SDK_DISABLED=true` to suppress OTel in CI/tests.
 
 ## Principles — non-negotiable
 
@@ -55,14 +57,24 @@ twe/                                  ← git repo root
 │   ├── alembic/versions/             ← migration scripts
 │   ├── scripts/reset_dev_db.py       ← drops + recreates dev DB (SQLite only, guards against prod)
 │   ├── app/
+│   │   ├── main.py                   ← create_app() factory; health + readiness probes; RequestIDMiddleware
+│   │   ├── api/
+│   │   │   └── v1/
+│   │   │       ├── router.py         ← v1 APIRouter; GET /api/v1/ping
+│   │   │       └── dependencies.py   ← get_db_session, get_current_user (501 stub), get_current_admin
 │   │   ├── core/
 │   │   │   ├── domain/
 │   │   │   │   ├── validators.py         ← validate_country_code / validate_language_code / validate_https_url / validate_email
 │   │   │   │   ├── enums.py              ← SystemRole, ActivityType, RecurrenceType, EventPrivacy, EventStatus, EventRole, MembershipStatus
 │   │   │   │   ├── value_objects/        ← Certification, MediaLinks, CollectionMembership, Ratings, CastMember
 │   │   │   │   └── entities/             ← Person, Studio, Collection, Movie, User, UserGroup, UserGroupMembership, EventSeries, Event, EventMembership
-│   │   │   └── interfaces/
-│   │   │       └── repositories.py       ← ABCs: UserRepository, UserGroupRepository, EventSeriesRepository, EventRepository, EventMembershipRepository
+│   │   │   ├── interfaces/
+│   │   │   │   └── repositories.py       ← ABCs: UserRepository, UserGroupRepository, EventSeriesRepository, EventRepository, EventMembershipRepository
+│   │   │   └── telemetry/
+│   │   │       ├── setup.py          ← setup_telemetry(app, engine); wires OTel traces + metrics
+│   │   │       ├── logging.py        ← configure_logging(); structlog JSON/console + OTel trace correlation
+│   │   │       ├── metrics.py        ← module-level counters: events_created, votes_cast, users_registered, gen_ai_token_usage
+│   │   │       └── ai_spans.py       ← gen_ai_span() context manager; GenAI OTel semantic conventions
 │   │   └── infrastructure/
 │   │       └── persistence/
 │   │           ├── database.py           ← engine + SessionFactory (DATABASE_URL env var)
@@ -70,8 +82,12 @@ twe/                                  ← git repo root
 │   │           ├── models/               ← SQLAlchemy ORM models (separate from domain entities)
 │   │           └── sqlite/               ← concrete repository implementations
 │   └── tests/
-│       ├── unit/domain/                  ← 226 unit tests (validators, value objects, entities)
-│       └── integration/persistence/      ← integration tests using in-memory SQLite session fixture
+│       ├── unit/
+│       │   ├── domain/               ← 230 unit tests (validators, value objects, entities)
+│       │   └── telemetry/            ← logging config + GenAI span unit tests
+│       └── integration/
+│           ├── api/                  ← health/ready probes, request ID middleware, v1 ping
+│           └── persistence/          ← repository tests using in-memory SQLite session fixture
 └── frontend/                         ← placeholder, TBD
 ```
 
@@ -220,6 +236,25 @@ EventMembership
 - **`invited_via_group_id`** on `EventMembership` preserves the audit trail when a whole group is invited at once. When a group is used to invite, the service fans out one `EventMembership` row per group member, each carrying the group ID.
 - **System role vs event role are independent**: `User.system_role` (ADMIN/MEMBER) controls platform-level access; `EventMembership.role` controls per-event access. An ADMIN has no implicit power inside someone else's event.
 
+## API layer
+
+### Endpoints defined
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `GET` | `/health` | none | Liveness probe — always 200 |
+| `GET` | `/ready` | none | Readiness probe — checks DB, 503 if down |
+| `GET` | `/api/v1/ping` | none | Sanity check — returns `{"message": "pong"}` |
+
+Docs auto-generated at `/api/docs` (Swagger) and `/api/redoc`.
+
+### Key design decisions — API
+
+- **`RequestIDMiddleware`**: injects a `x-request-id` UUID on every request/response for log correlation. If the caller supplies `X-Request-ID`, it is echoed back unchanged.
+- **`get_current_user` is a stub** (raises 501): Firebase JWT verification is the next piece to implement. Depends on Firebase Admin SDK. See `app/api/v1/dependencies.py`.
+- **`Depends()` in function signatures** is the FastAPI idiom. Ruff B008 is suppressed with `# noqa: B008` on those lines — do not remove those comments.
+- **`OTEL_SDK_DISABLED=true` in integration tests**: The SDK `TracerProvider.__init__` caches this flag at construction time. The `otel_exporter` fixture in `tests/unit/telemetry/test_ai_spans.py` therefore removes the env var **before** creating the `TracerProvider` and restores it after the test.
+
 ## TV Series and Game — planned
 
 These are coming. When they arrive:
@@ -231,6 +266,9 @@ These are coming. When they arrive:
 - **SSL certificates**: this machine has a corporate/custom cert chain. Fix applied:
   - Git: `git config --global http.sslBackend schannel`
   - pip: use `--trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org`
+- **Running the dev server**: `cd backend && uvicorn app.main:app --reload` (requires `DATABASE_URL` and `DATABASE_ENCRYPTION_KEY` env vars)
+- **Building docs locally**: `sphinx-apidoc --output-dir docs/api --force --module-first --separate backend/app && sphinx-build -W -b html docs docs/_build/html` (from repo root; install `docs/requirements.txt` first)
+- **Docs CI actions (IDE errors)**: the IDE flags `actions/checkout@v4` etc. as unresolvable — corporate SSL issue, same as pip/git. The workflow is correct; the same actions are used in `backend-ci.yml`.
 - **Running tests locally**: `cd backend && python -m pytest`
 - **Installing dev deps**: `cd backend && pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org pytest pytest-cov`
 - **`gh` CLI location**: `C:\Program Files\GitHub CLI\gh.exe` (not on bash PATH by default)
