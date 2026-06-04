@@ -22,7 +22,7 @@ A group activity organiser. Groups of people coordinate and vote on a shared act
 - **Backend**: Python 3.12 (targeting; currently running on 3.11 locally)
 - **Web framework**: FastAPI + Uvicorn (ASGI)
 - **Frontend**: TBD — React is the leading candidate
-- **CI**: GitHub Actions (`.github/workflows/backend-ci.yml`)
+- **CI**: GitHub Actions (`.github/workflows/ci.yml`) — single sequential pipeline: Backend → Frontend → Docs
 - **Repo**: https://github.com/adrien-fort/tweo
 - **Observability**: structlog (structured logging) + OpenTelemetry SDK (traces + metrics). Auto-instruments FastAPI and SQLAlchemy. Uses `OTEL_SDK_DISABLED=true` to suppress OTel in CI/tests.
 
