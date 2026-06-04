@@ -28,7 +28,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
 
-def setup_telemetry(app: object, engine: object) -> None:  # type: ignore[type-arg]
+def setup_telemetry(app: object, engine: object) -> None:
     """Initialise OpenTelemetry traces and metrics for the application.
 
     Must be called once, after the FastAPI app and SQLAlchemy engine
@@ -81,9 +81,9 @@ def _setup_metrics(resource: Resource) -> None:
     metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[reader]))
 
 
-def _instrument_app(app: object, engine: object) -> None:  # type: ignore[type-arg]
+def _instrument_app(app: object, engine: object) -> None:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
     FastAPIInstrumentor.instrument_app(app)  # type: ignore[arg-type]
-    SQLAlchemyInstrumentor().instrument(engine=engine)  # type: ignore[arg-type]
+    SQLAlchemyInstrumentor().instrument(engine=engine)

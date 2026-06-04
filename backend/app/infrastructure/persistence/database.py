@@ -9,7 +9,7 @@ supplied by Ansible from Azure Key Vault.
 
 import os
 
-from sqlalchemy import create_engine
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 _DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./tweo.db")
@@ -22,7 +22,7 @@ _engine = create_engine(_DATABASE_URL, connect_args=_connect_args)
 SessionFactory: sessionmaker[Session] = sessionmaker(bind=_engine, expire_on_commit=False)
 
 
-def get_engine():  # type: ignore[no-untyped-def]
+def get_engine() -> Engine:
     """Return the configured SQLAlchemy engine.
 
     Returns:

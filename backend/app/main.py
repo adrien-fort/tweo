@@ -15,12 +15,14 @@ Environment variables consumed at startup:
 """
 
 import uuid
+from collections.abc import Awaitable, Callable
 
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from app.api.v1.router import router as v1_router
 from app.core.telemetry.logging import configure_logging
@@ -42,7 +44,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     so clients and load balancers can correlate requests to logs.
     """
 
-    async def dispatch(self, request: Request, call_next):  # type: ignore[override]
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         """Process the request with an injected request ID."""
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         structlog.contextvars.clear_contextvars()

@@ -133,7 +133,7 @@ class SQLiteEventRepository(EventRepository):
             existing.activity_type = event.activity_type.value
             existing.privacy = event.privacy.value
             existing.status = event.status.value
-            existing.series_id = str(event.series_id) if event.series_id else None
+            existing.series_id = str(event.series_id) if event.series_id else None  # type: ignore[assignment]
             existing.series_sequence = event.series_sequence
             existing.scheduled_at = event.scheduled_at
             existing.updated_at = event.updated_at

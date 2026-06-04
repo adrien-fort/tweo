@@ -21,6 +21,7 @@ Environment variables:
 import logging
 import os
 import sys
+from collections.abc import MutableMapping
 from typing import Any
 
 import structlog
@@ -30,8 +31,8 @@ from opentelemetry import trace
 def _add_otel_trace_context(
     logger: Any,  # noqa: ANN401
     method: str,
-    event_dict: dict[str, Any],
-) -> dict[str, Any]:
+    event_dict: MutableMapping[str, Any],
+) -> MutableMapping[str, Any]:
     """Inject the current OTel trace and span IDs into the log entry.
 
     Args:
