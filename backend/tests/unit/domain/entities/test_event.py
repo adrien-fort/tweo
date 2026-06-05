@@ -13,6 +13,7 @@ from app.core.domain.enums import (
     EventStatus,
     MembershipStatus,
     RecurrenceType,
+    VotingSystem,
 )
 
 
@@ -76,6 +77,33 @@ class TestEventSeriesValidation:
     def test_whitespace_title_raises(self, organiser_id: UUID) -> None:
         with pytest.raises(ValueError, match="title"):
             EventSeries(id=uuid4(), title="   ", organiser_id=organiser_id, recurrence=RecurrenceType.WEEKLY)
+
+
+class TestEventSeriesVotingSystem:
+    """EventSeries.voting_system field."""
+
+    def test_voting_system_defaults_to_approval(self, valid_series: EventSeries) -> None:
+        assert valid_series.voting_system == VotingSystem.APPROVAL
+
+    def test_voting_system_can_be_set_explicitly(self, organiser_id: UUID) -> None:
+        series = EventSeries(
+            id=uuid4(),
+            title="Ranked Night",
+            organiser_id=organiser_id,
+            recurrence=RecurrenceType.WEEKLY,
+            voting_system=VotingSystem.RANKED_CHOICE,
+        )
+        assert series.voting_system == VotingSystem.RANKED_CHOICE
+
+    def test_two_round_runoff_system(self, organiser_id: UUID) -> None:
+        series = EventSeries(
+            id=uuid4(),
+            title="Runoff Night",
+            organiser_id=organiser_id,
+            recurrence=RecurrenceType.MONTHLY,
+            voting_system=VotingSystem.TWO_ROUND_RUNOFF,
+        )
+        assert series.voting_system == VotingSystem.TWO_ROUND_RUNOFF
 
 
 class TestEventSeriesEquality:

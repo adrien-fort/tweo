@@ -85,3 +85,45 @@ class MembershipStatus(Enum):
     PENDING_APPROVAL = "pending_approval"
     ACCEPTED = "accepted"
     DECLINED = "declined"
+
+
+class WishlistEntryStatus(Enum):
+    """Lifecycle status of a wishlist entry.
+
+    ``PENDING``: the entry is on the active wishlist, available to be
+    selected as a candidate for a future event.
+
+    ``SCHEDULED``: the entry has been selected as a candidate for an
+    upcoming event and is currently in an :class:`EventCandidate` list.
+    Returns to ``PENDING`` if the event is cancelled before completion.
+
+    ``COMPLETED``: the entry was the winning pick for an event and that
+    event has completed. The entry is kept for history and excluded from
+    the active wishlist view.
+
+    ``REMOVED``: the entry was manually removed by the suggester or an
+    organiser. Excluded from the active wishlist view.
+    """
+
+    PENDING = "pending"
+    SCHEDULED = "scheduled"
+    COMPLETED = "completed"
+    REMOVED = "removed"
+
+
+class VotingSystem(Enum):
+    """Voting system used to tally event ballots within a series.
+
+    ``APPROVAL``: each voter selects one or more candidates they approve
+    of; the candidate with the most approvals wins.
+
+    ``RANKED_CHOICE``: each voter ranks all candidates; the winner is
+    determined by instant-runoff elimination.
+
+    ``TWO_ROUND_RUNOFF``: a first round narrows the field to the top two
+    candidates; a second round determines the winner.
+    """
+
+    APPROVAL = "approval"
+    RANKED_CHOICE = "ranked_choice"
+    TWO_ROUND_RUNOFF = "two_round_runoff"

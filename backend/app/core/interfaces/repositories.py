@@ -8,10 +8,12 @@ logic decoupled from the storage backend.
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from app.core.domain.entities.ballot import EventBallot
 from app.core.domain.entities.event import Event, EventMembership, EventSeries
 from app.core.domain.entities.user import User
 from app.core.domain.entities.user_group import UserGroup, UserGroupMembership
-from app.core.domain.enums import EventStatus, MembershipStatus
+from app.core.domain.entities.wishlist import EventCandidate, WishlistEntry
+from app.core.domain.enums import EventStatus, MembershipStatus, WishlistEntryStatus
 
 
 class UserRepository(ABC):
@@ -150,3 +152,83 @@ class EventMembershipRepository(ABC):
     @abstractmethod
     def get_by_status(self, event_id: UUID, status: MembershipStatus) -> list[EventMembership]:
         """Return all memberships for an event filtered by status."""
+
+
+class WishlistEntryRepository(ABC):
+    """Persistence interface for :class:`~app.core.domain.entities.wishlist.WishlistEntry` entities."""
+
+    @abstractmethod
+    def get_by_id(self, id: UUID) -> WishlistEntry | None:
+        """Return the entry with the given UUID, or ``None``."""
+
+    @abstractmethod
+    def get_by_series(self, series_id: UUID) -> list[WishlistEntry]:
+        """Return all entries for the given series, regardless of status."""
+
+    @abstractmethod
+    def get_active_by_series(self, series_id: UUID) -> list[WishlistEntry]:
+        """Return entries with status ``PENDING`` or ``SCHEDULED`` for the given series."""
+
+    @abstractmethod
+    def get_by_series_and_status(self, series_id: UUID, status: WishlistEntryStatus) -> list[WishlistEntry]:
+        """Return entries for the given series filtered by status."""
+
+    @abstractmethod
+    def save(self, entry: WishlistEntry) -> WishlistEntry:
+        """Persist a new or updated entry and return the saved instance."""
+
+
+class EventCandidateRepository(ABC):
+    """Persistence interface for :class:`~app.core.domain.entities.wishlist.EventCandidate` entities."""
+
+    @abstractmethod
+    def get_by_id(self, id: UUID) -> EventCandidate | None:
+        """Return the candidate with the given UUID, or ``None``."""
+
+    @abstractmethod
+    def get_by_event(self, event_id: UUID) -> list[EventCandidate]:
+        """Return all candidates shortlisted for the given event."""
+
+    @abstractmethod
+    def save(self, candidate: EventCandidate) -> EventCandidate:
+        """Persist a new candidate and return the saved instance."""
+
+    @abstractmethod
+    def delete(self, id: UUID) -> None:
+        """Remove a candidate from the shortlist."""
+
+
+class EventBallotRepository(ABC):
+    """Persistence interface for :class:`~app.core.domain.entities.ballot.EventBallot` entities.
+
+    Ballots are append-only. Revisions supersede prior rows rather than
+    updating them in place, so ``save`` always inserts a new row.
+    """
+
+    @abstractmethod
+    def get_by_id(self, id: UUID) -> EventBallot | None:
+        """Return the ballot with the given UUID, or ``None``."""
+
+    @abstractmethod
+    def get_current_by_event_and_user(self, event_id: UUID, user_id: UUID, round: int = 1) -> EventBallot | None:
+        """Return the current (non-superseded) ballot for a user in a given event round, or ``None``."""
+
+    @abstractmethod
+    def get_all_by_event(self, event_id: UUID, round: int = 1) -> list[EventBallot]:
+        """Return all current ballots for the given event and round."""
+
+    @abstractmethod
+    def get_history_by_event_and_user(self, event_id: UUID, user_id: UUID) -> list[EventBallot]:
+        """Return the full ballot history for a user in an event, ordered by ``cast_at`` ascending."""
+
+    @abstractmethod
+    def save(self, ballot: EventBallot) -> EventBallot:
+        """Insert a new ballot row and return the saved instance.
+
+        Callers are responsible for superseding the previous current ballot
+        before calling ``save`` with the revised one.
+        """
+
+    @abstractmethod
+    def supersede(self, ballot_id: UUID) -> None:
+        """Mark the given ballot as superseded by setting ``superseded_at`` to now."""

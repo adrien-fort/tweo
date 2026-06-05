@@ -83,7 +83,7 @@ twe/                                  ← git repo root
 │   │           └── sqlite/               ← concrete repository implementations
 │   └── tests/
 │       ├── unit/
-│       │   ├── domain/               ← 230 unit tests (validators, value objects, entities)
+│       │   ├── domain/               ← 298 unit tests (validators, value objects, entities)
 │       │   └── telemetry/            ← logging config + GenAI span unit tests
 │       └── integration/
 │           ├── api/                  ← health/ready probes, request ID middleware, v1 ping
@@ -107,7 +107,7 @@ twe/                                  ← git repo root
 | `Ratings` | `community_score \| None`, `vote_count \| None`, `certifications: tuple[Certification]` |
 | `CastMember` | `person: Person`, `character_name` |
 
-### Entities (identity-based equality by ID, `frozen=True, eq=False`)
+### Entities — media (immutable TMDB sources, `frozen=True, eq=False`)
 
 | Class | Primary key | Notable fields |
 |---|---|---|
@@ -115,6 +115,20 @@ twe/                                  ← git repo root
 | `Studio` | `tmdb_id` | `name`, `country \| None` |
 | `Collection` | `collection_id` | `name` |
 | `Movie` | `tmdb_id` | `title`, `synopsis`, `release_year`, `director: Person`, `cast`, `studios`, `media_links`, `ratings`, `original_language`, `collection_membership \| None` |
+
+### Entities — platform (mutable, `eq=False`)
+
+| Class | Primary key | Notable fields |
+|---|---|---|
+| `User` | `id` (UUID) | `firebase_uid`, `email` (encrypted), `system_role`, `anonymized_at` |
+| `UserGroup` | `id` | `name`, `owner_id` |
+| `UserGroupMembership` | `id` | `group_id`, `user_id`, `added_by` |
+| `EventSeries` | `id` | `title`, `organiser_id`, `recurrence`, `voting_system` |
+| `Event` | `id` | `title`, `activity_type`, `organiser_id`, `privacy`, `status`, `series_id \| None` |
+| `EventMembership` | `id` | `event_id`, `user_id`, `role`, `status`, `invited_by` |
+| `WishlistEntry` | `id` | `series_id`, `activity_type`, `tmdb_id`, `added_by`, `status`, `completed_event_id \| None` |
+| `EventCandidate` | `id` | `event_id`, `wishlist_entry_id`, `added_by: UUID \| None` (None = system) |
+| `EventBallot` | `id` | `event_id`, `user_id`, `round`, `payload: dict`, `superseded_at \| None` |
 
 ## Key design decisions
 
@@ -126,6 +140,12 @@ twe/                                  ← git repo root
 - **`Ratings` holds both**: TMDB community score (`vote_average` + `vote_count`) and age certifications per country. `vote_count` requires `community_score` (they are always set together in TMDB data).
 - **`mother_tongue` ≠ `spoken_languages`**: native language is a single optional field; additional languages spoken are a separate tuple.
 - **Validators module**: shared helpers for ISO code validation to avoid duplicating logic across domain classes. Every class that stores a country or language code delegates to these.
+- **Wishlist is series-level, ballot is event-level**: `WishlistEntry` belongs to `EventSeries` (the full pool). For each `Event`, an organiser (or future algorithm) picks a shortlist via `EventCandidate` rows. Members then vote only on those candidates.
+- **`WishlistEntry` status filter**: COMPLETED rows are kept for history (prevents re-adding recently watched content); REMOVED rows are excluded from the active view. A partial unique index `UNIQUE (series_id, activity_type, tmdb_id) WHERE status != 'COMPLETED'` prevents duplicates on the active list while allowing re-nomination after completion.
+- **`EventBallot` is append-only**: revisions create a new row and supersede the previous one (`superseded_at` timestamp). Current ballot = `WHERE superseded_at IS NULL`. Partial unique index `UNIQUE (event_id, user_id, round) WHERE superseded_at IS NULL` enforces exactly one active ballot per member per round.
+- **`EventBallot.payload` is a JSONB dict**: structure varies by `VotingSystem` on the parent `EventSeries`. Approval: `{"approved": [...candidate_uuids]}`. Ranked choice: `{"rankings": [...candidate_uuids]}`. Two-round runoff: `{"pick": "candidate_uuid"}` with `round` field incrementing per round.
+- **`EventCandidate.added_by` is nullable**: `None` means the system auto-selected the candidate; a UUID means an organiser or co-organiser made the pick manually. The mechanism for auto-selection is a future feature.
+- **`VotingSystem` lives on `EventSeries`**: all events in a series share the same voting algorithm. Defaults to `APPROVAL`.
 
 ## Authentication & identity
 

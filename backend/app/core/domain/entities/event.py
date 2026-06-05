@@ -4,7 +4,15 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID
 
-from app.core.domain.enums import ActivityType, EventPrivacy, EventRole, EventStatus, MembershipStatus, RecurrenceType
+from app.core.domain.enums import (
+    ActivityType,
+    EventPrivacy,
+    EventRole,
+    EventStatus,
+    MembershipStatus,
+    RecurrenceType,
+    VotingSystem,
+)
 
 
 def _utcnow() -> datetime:
@@ -28,6 +36,9 @@ class EventSeries:
         title: Human-readable series name (e.g. ``"MCU Marathon"``).
         organiser_id: UUID of the user who created the series.
         recurrence: How often new instances are scheduled.
+        voting_system: Algorithm used to tally event ballots. All events
+            in the series share the same system. Defaults to
+            ``APPROVAL``.
         description: Optional longer description of the series.
         created_at: Timestamp of series creation (UTC).
         updated_at: Timestamp of last modification (UTC).
@@ -49,6 +60,7 @@ class EventSeries:
     title: str
     organiser_id: UUID
     recurrence: RecurrenceType
+    voting_system: VotingSystem = VotingSystem.APPROVAL
     description: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
